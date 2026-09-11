@@ -316,11 +316,11 @@ async def main():
             catalog = json.load(f)
 
     story_info = None
-    target_clean = re.sub(r"['’`\s\-_]+", "", args.story.lower())
+    target_clean = re.sub(r"['’`:;\(\)\s\-_]+", "", args.story.lower())
     for k, v in catalog.items():
-        off_clean = re.sub(r"['’`\s\-_]+", "", v.get("official_title", "").lower())
-        chn_clean = re.sub(r"['’`\s\-_]+", "", v.get("channel_name", "").lower())
-        fld_clean = re.sub(r"['’`\s\-_]+", "", v.get("channel_folder", "").lower())
+        off_clean = re.sub(r"['’`:;\(\)\s\-_]+", "", v.get("official_title", "").lower())
+        chn_clean = re.sub(r"['’`:;\(\)\s\-_]+", "", v.get("channel_name", "").lower())
+        fld_clean = re.sub(r"['’`:;\(\)\s\-_]+", "", v.get("channel_folder", "").lower())
         if target_clean in off_clean or target_clean in chn_clean or target_clean in fld_clean or off_clean in target_clean:
             story_info = v
             break
@@ -330,7 +330,7 @@ async def main():
     if not story_info and os.path.exists(stories_data_dir):
         # Fallback: scan stories_data directory directly by string similarity
         for d in os.listdir(stories_data_dir):
-            d_clean = re.sub(r"['’`\s\-_]+", "", d.lower())
+            d_clean = re.sub(r"['’`:;\(\)\s\-_]+", "", d.lower())
             if target_clean in d_clean or d_clean in target_clean:
                 m = re.match(r'^(\d+)_(.+)$', d)
                 cid_str = m.group(1) if m else "0"
