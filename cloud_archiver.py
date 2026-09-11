@@ -898,13 +898,26 @@ async def main():
 
                             # 🏷️ REWRITE EMBEDDED ID3 TAGS (PURE TITLE)
                             try:
-                                from mutagen.id3 import ID3, TIT2, TPE1
+                                from mutagen.id3 import ID3, TIT2, TPE1, APIC
                                 try:
                                     tags = ID3(buf)
                                 except Exception:
                                     tags = ID3()
                                 tags.add(TIT2(encoding=3, text=display_title))
                                 tags.add(TPE1(encoding=3, text=performer_title))
+                                if cover_path and os.path.exists(cover_path):
+                                    try:
+                                        with open(cover_path, "rb") as img_f:
+                                            img_bytes = img_f.read()
+                                        tags.add(APIC(
+                                            encoding=3,
+                                            mime="image/jpeg",
+                                            type=3,
+                                            desc="Cover",
+                                            data=img_bytes
+                                        ))
+                                    except Exception:
+                                        pass
                                 clean_buf = io.BytesIO()
                                 tags.save(clean_buf)
                                 clean_buf.seek(0)
@@ -934,7 +947,7 @@ async def main():
                                 vault_client.send_file(
                                     vault_channel,
                                     file=input_file,
-                                    thumb=cover_input or (cover_path if cover_path and os.path.exists(cover_path) else None),
+                                    thumb=cover_path if cover_path and os.path.exists(cover_path) else None,
                                     caption="",
                                     attributes=audio_attrs,
                                     supports_streaming=True
