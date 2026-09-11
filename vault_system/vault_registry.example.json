@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "stories": {},
+  "workers": {},
+  "schema": {
+    "story": "IN_PROGRESS|BLOCKED|COMPLETED",
+    "worker": "worker-1",
+    "run_id": "github-run-id",
+    "session_slot": "TELEGRAM_STRING_SESSION",
+    "target_channel_id": "-1000000000000",
+    "lease_expires": 0,
+    "last_verified_episode": 0,
+    "missing_episodes": []
+  }
+}

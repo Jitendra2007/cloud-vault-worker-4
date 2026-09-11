@@ -1,0 +1,16 @@
+# Ignore all Telegram credentials and sessions
+*.session
+*.session-journal
+sessions/
+master_vault_session.txt
+saved_sessions.json
+vault_sessions_pool.json
+vault_sessions_pool.raw.json
+.sessions_state/
+private_sessions/
+
+# Python cache & temp
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.tmp
