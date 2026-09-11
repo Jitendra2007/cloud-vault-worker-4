@@ -4,10 +4,10 @@ on:
   workflow_dispatch:
     inputs:
       story:
-        description: 'Story Name (e.g. Mad Vampire Lord\'s Bride, A Wife\'s Revenge, Child of Calamity)'
+        description: "Story Name (e.g. Mad Vampire Lord's Bride, A Wife's Revenge, Child of Calamity)"
         required: true
       from_start:
-        description: 'Start fresh from Episode 1 (delete old if any & create clean channel)'
+        description: "Start fresh from Episode 1 (delete old if any and create clean channel)"
         required: false
         default: 'false'
 
