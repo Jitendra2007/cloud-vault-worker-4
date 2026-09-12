@@ -33,6 +33,8 @@ API_HASH = os.environ.get('API_HASH') or os.environ.get('TELEGRAM_API_HASH', '')
 
 HARVESTER_SESSION = os.environ.get('HARVESTER_SESSION') or os.environ.get('TELEGRAM_STRING_SESSION_HARVESTER') or os.environ.get('VAULT_SESSION') or ''
 VAULT_SESSION = os.environ.get('VAULT_SESSION') or os.environ.get('TELEGRAM_STRING_SESSION_VAULT') or ''
+BACKUP_HARVESTER_SESSION = os.environ.get('HARVESTER_SESSION_BACKUP') or os.environ.get('TELEGRAM_STRING_SESSION_HARVESTER_BACKUP') or ''
+BACKUP_VAULT_SESSION = os.environ.get('VAULT_SESSION_BACKUP') or os.environ.get('TELEGRAM_STRING_SESSION_VAULT_BACKUP') or ''
 
 if not VAULT_SESSION and os.path.exists('master_vault_session.txt'):
     with open('master_vault_session.txt', 'r', encoding='utf-8') as f:
@@ -45,6 +47,8 @@ if not VAULT_SESSION:
         _cands = _rsm.candidates("vault")
         if _cands:
             VAULT_SESSION = _rsm._read_session(_cands[0])
+            if len(_cands) > 1:
+                BACKUP_VAULT_SESSION = _rsm._read_session(_cands[1])
     except Exception:
         pass
 
@@ -55,6 +59,8 @@ if not HARVESTER_SESSION:
         _cands = _rsm.candidates("main")
         if _cands:
             HARVESTER_SESSION = _rsm._read_session(_cands[0])
+            if len(_cands) > 1:
+                BACKUP_HARVESTER_SESSION = _rsm._read_session(_cands[1])
     except Exception:
         pass
 
