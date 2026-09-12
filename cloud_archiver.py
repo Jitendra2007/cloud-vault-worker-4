@@ -873,7 +873,7 @@ async def main():
                         try:
                             buf = io.BytesIO()
                             active_dl_client = download_client if download_client else (harvester_client if harvester_client and harvester_client.is_connected() else vault_client)
-                            for dl_try in range(1, 4):
+                            for dl_try in range(1, 6):
                                 try:
                                     if not active_dl_client.is_connected():
                                         await active_dl_client.connect()
@@ -884,13 +884,13 @@ async def main():
                                     target_m = fresh_msg if (fresh_msg and fresh_msg.media) else msg
                                     await asyncio.wait_for(
                                         active_dl_client.download_media(target_m, file=buf),
-                                        timeout=60.0
+                                        timeout=180.0
                                     )
                                     if buf.getbuffer().nbytes > 0:
                                         break
                                 except (Exception, asyncio.CancelledError, asyncio.TimeoutError) as dl_err:
-                                    print(f"   ⚠️ Download attempt {dl_try}/3 for Ep {calc_ep}: {dl_err}")
-                                    await asyncio.sleep(2.0 * dl_try)
+                                    print(f"   ⚠️ Download attempt {dl_try}/5 for Ep {calc_ep}: {dl_err}")
+                                    await asyncio.sleep(4.0 * dl_try)
 
                             buf.seek(0)
                             raw_bytes = buf.getvalue()
