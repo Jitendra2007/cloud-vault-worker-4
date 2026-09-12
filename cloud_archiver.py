@@ -507,7 +507,7 @@ async def main():
 
         uploaded_episodes = set()
         print("Scanning vault channel for existing episodes...")
-        async for msg in vault_client.iter_messages(vault_channel, limit=1000):
+        async for msg in vault_client.iter_messages(vault_channel, limit=None):
             if msg.media and isinstance(msg.media, MessageMediaDocument):
                 for attr in msg.media.document.attributes:
                     if isinstance(attr, DocumentAttributeAudio) and attr.title:
@@ -704,7 +704,7 @@ async def main():
 
     uploaded_episodes = set()
     print("Scanning vault channel for existing episodes...")
-    async for msg in vault_client.iter_messages(vault_channel, limit=1000):
+    async for msg in vault_client.iter_messages(vault_channel, limit=None):
         if msg.media and isinstance(msg.media, MessageMediaDocument):
             for attr in msg.media.document.attributes:
                 if isinstance(attr, DocumentAttributeAudio) and attr.title:
