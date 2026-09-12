@@ -893,14 +893,20 @@ async def main():
                                     await asyncio.sleep(2.0 * dl_try)
 
                             buf.seek(0)
-                            if buf.getbuffer().nbytes == 0:
-                                raise Exception(f"Downloaded 0 bytes for Ep {calc_ep}")
+                            raw_bytes = buf.getvalue()
+                            if len(raw_bytes) < 500_000:
+                                raise Exception(f"Downloaded only {len(raw_bytes)} bytes for Ep {calc_ep} - audio stream is truncated or corrupt!")
 
-                            # 🏷️ REWRITE EMBEDDED ID3 TAGS (PURE TITLE)
+                            # 🏷️ REWRITE EMBEDDED ID3 TAGS (SAFE ON-DISK TEMP FILE TO PRESERVE MPEG STREAM)
+                            tmp_mp3 = os.path.join("scratch", f"upload_ep_{calc_ep}_{os.getpid()}.mp3")
+                            os.makedirs("scratch", exist_ok=True)
+                            with open(tmp_mp3, "wb") as f_out:
+                                f_out.write(raw_bytes)
+
                             try:
                                 from mutagen.id3 import ID3, TIT2, TPE1, APIC
                                 try:
-                                    tags = ID3(buf)
+                                    tags = ID3(tmp_mp3)
                                 except Exception:
                                     tags = ID3()
                                 tags.add(TIT2(encoding=3, text=display_title))
@@ -918,16 +924,25 @@ async def main():
                                         ))
                                     except Exception:
                                         pass
-                                clean_buf = io.BytesIO()
-                                tags.save(clean_buf)
-                                clean_buf.seek(0)
-                                if len(clean_buf.getvalue()) > 100:
-                                    buf = clean_buf
+                                tags.save(tmp_mp3)
                             except Exception as tag_err:
                                 print(f"   Notice on ID3 tag rewrite for Ep {calc_ep}: {tag_err}")
 
-                            buf.seek(0)
-                            upload_bytes = buf.getvalue()
+                            # STRICT INTEGRITY CHECK BEFORE UPLOAD
+                            final_sz = os.path.getsize(tmp_mp3)
+                            if final_sz < 500_000:
+                                if os.path.exists(tmp_mp3):
+                                    os.remove(tmp_mp3)
+                                raise Exception(f"CRITICAL: Final file for Ep {calc_ep} is only {final_sz} bytes (under 500KB)! Aborting upload.")
+
+                            with open(tmp_mp3, "rb") as f_in:
+                                upload_bytes = f_in.read()
+
+                            try:
+                                if os.path.exists(tmp_mp3):
+                                    os.remove(tmp_mp3)
+                            except Exception:
+                                pass
 
                             input_file = await asyncio.wait_for(
                                 fast_upload_file(vault_client, upload_bytes, file_name=final_filename, workers=4),
