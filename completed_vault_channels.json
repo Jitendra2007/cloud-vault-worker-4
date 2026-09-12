@@ -42,15 +42,21 @@
     "timestamp": "2026-09-09 16:15:38 UTC"
   },
   {
-    "story": "Death Flag Villain",
-    "vault_channel_id": "-1004473406303",
-    "total_episodes": 671,
-    "timestamp": "2026-09-11 16:52:29 UTC"
-  },
-  {
     "story": "Fairytale of Lies",
     "vault_channel_id": "-1004306757702",
     "total_episodes": 757,
     "timestamp": "2026-09-11 16:52:45 UTC"
+  },
+  {
+    "story": "Death Flag Villain",
+    "vault_channel_id": "-1004473406303",
+    "total_episodes": 671,
+    "timestamp": "2026-09-12 03:29:36 UTC"
+  },
+  {
+    "story": "Child of Calamity",
+    "vault_channel_id": "-1003533875902",
+    "total_episodes": 560,
+    "timestamp": "2026-09-12 04:37:54 UTC"
   }
 ]

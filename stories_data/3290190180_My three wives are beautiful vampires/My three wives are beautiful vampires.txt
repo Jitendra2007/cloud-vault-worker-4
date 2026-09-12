@@ -1,6 +1,9 @@
-# My three wives are beautiful vampires Link Data
-==================================================
 -1003290190180 -> My three wives are beautiful vampires -> 4 -> [01-20] -> N/A -> https://t.me/VictorAlucard_Bot?start=Z2V0LTE3OTEwMjU5MjUyNTE2OTYyMS0xNzkxMjE2MzExNzUxNDUxNjI
+-1003290190180 -> My three wives are beautiful vampires -> 4 -> [Book 1: 01-20] -> N/A -> https://t.me/VictorAlucard_Bot?start=Z2V0LTE3OTEwMjU5MjUyNTE2OTYyMS0xNzkxMjE2MzExNzUxNDUxNjI
+-1003290190180 -> My three wives are beautiful vampires -> 4 -> [Book 1: 21-40] -> N/A -> https://t.me/VictorAlucard_Bot?start=Z2V0LTE3OTEyMjYzMzIwOTM1NDQwMS0xNzkxNDE2NzE4NTkzMjk5NDI
+-1003290190180 -> My three wives are beautiful vampires -> 4 -> [Book 1: 41-60] -> N/A -> https://t.me/VictorAlucard_Bot?start=Z2V0LTE3OTE0MjY3Mzg5MzUzOTE4MS0xNzkxNjE3MTI1NDM1MTQ3MjI
+-1003290190180 -> My three wives are beautiful vampires -> 4 -> [Book 1: 61-80] -> N/A -> https://t.me/VictorAlucard_Bot?start=Z2V0LTE3OTE2MjcxNDU3NzcyMzk2MS0xNzkxODE3NTMyMjc2OTk1MDI
+-1003290190180 -> My three wives are beautiful vampires -> 4 -> [Book 1: 81-100] -> N/A -> https://t.me/VictorAlucard_Bot?start=Z2V0LTE3OTE4Mjc1NTI2MTkwODc0MS0xNzkyMDE3OTM5MTE4ODQyODI
 -1003290190180 -> My three wives are beautiful vampires -> 4 -> [21-40] -> N/A -> https://t.me/VictorAlucard_Bot?start=Z2V0LTE3OTEyMjYzMzIwOTM1NDQwMS0xNzkxNDE2NzE4NTkzMjk5NDI
 -1003290190180 -> My three wives are beautiful vampires -> 4 -> [41-60] -> N/A -> https://t.me/VictorAlucard_Bot?start=Z2V0LTE3OTE0MjY3Mzg5MzUzOTE4MS0xNzkxNjE3MTI1NDM1MTQ3MjI
 -1003290190180 -> My three wives are beautiful vampires -> 4 -> [61-80] -> N/A -> https://t.me/VictorAlucard_Bot?start=Z2V0LTE3OTE2MjcxNDU3NzcyMzk2MS0xNzkxODE3NTMyMjc2OTk1MDI
