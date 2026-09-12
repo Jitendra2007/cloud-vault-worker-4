@@ -28,8 +28,8 @@ from telethon.tl.types import (
 )
 from parallel_transfer import fast_download_file, fast_upload_file
 
-API_ID = int(os.environ.get('API_ID', 36198115))
-API_HASH = os.environ.get('API_HASH', 'b4fb430cbe6a8946761eb1bbef99b0c2')
+API_ID = int(os.environ.get('API_ID') or os.environ.get('TELEGRAM_API_ID', 0))
+API_HASH = os.environ.get('API_HASH') or os.environ.get('TELEGRAM_API_HASH', '')
 
 HARVESTER_SESSION = os.environ.get('HARVESTER_SESSION') or os.environ.get('TELEGRAM_STRING_SESSION_HARVESTER') or os.environ.get('VAULT_SESSION') or ''
 VAULT_SESSION = os.environ.get('VAULT_SESSION') or os.environ.get('TELEGRAM_STRING_SESSION_VAULT') or ''
@@ -111,6 +111,24 @@ SPECIAL_TOKENS = {
         386: ("RayTalenT_Bot", "Z2V0LTcyNzczODIzOTg4NzQ4NTY0")
     }
 }
+
+def record_pending_backfill(entry):
+    path = "pending_backfill.json"
+    data = []
+    if os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception:
+            data = []
+    if isinstance(data, list):
+        # Avoid duplicate entries
+        exists = any(x.get("story") == entry.get("story") and x.get("episode") == entry.get("episode") for x in data)
+        if not exists:
+            data.append(entry)
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            print(f"📋 Logged Ep {entry.get('episode')} to {path} for future backfill.")
 
 async def harvest_from_bot(harvester_client, vault_client, bot_username, start_token, expected_count=0, label=""):
     download_client = harvester_client
@@ -294,6 +312,7 @@ async def main():
     parser.add_argument("--total_slices", type=int, default=0, help="Total slice count for parallel harvest")
     parser.add_argument("--harvest_to_dir", type=str, default="", help="Directory to save harvested MP3s into")
     parser.add_argument("--stream_from_dir", type=str, default="", help="Directory containing pre-harvested MP3s to stream into Vault channel")
+    parser.add_argument("--allow_backfill_skip", action="store_true", help="Record stalled DC-timeout episodes to pending_backfill.json and continue pipeline")
     args = parser.parse_args()
 
     harvester_sess = HARVESTER_SESSION or os.environ.get(f"TELEGRAM_STRING_SESSION_HARVESTER_{args.slice_idx}") or VAULT_SESSION
@@ -888,6 +907,9 @@ async def main():
                                     )
                                     if buf.getbuffer().nbytes > 0:
                                         break
+                                except FloodWaitError as fwe:
+                                    print(f"⏳ Telegram FloodWait during download of Ep {calc_ep}: Sleeping {fwe.seconds + 5}s...")
+                                    await asyncio.sleep(fwe.seconds + 5)
                                 except (Exception, asyncio.CancelledError, asyncio.TimeoutError) as dl_err:
                                     print(f"   ⚠️ Download attempt {dl_try}/5 for Ep {calc_ep}: {dl_err}")
                                     await asyncio.sleep(4.0 * dl_try)
@@ -971,12 +993,27 @@ async def main():
                             )
                             ep_uploaded = True
                             break
+                        except FloodWaitError as fwe:
+                            print(f"⏳ Telegram FloodWait on Ep {calc_ep} upload: Sleeping {fwe.seconds + 5}s...")
+                            await asyncio.sleep(fwe.seconds + 5)
                         except (Exception, asyncio.CancelledError, asyncio.TimeoutError) as ep_err:
                             print(f"   ⚠️ Ep {calc_ep} transfer glitch (attempt {ep_attempt}/5): {ep_err}")
                             await asyncio.sleep(3.0 * ep_attempt)
 
                     if not ep_uploaded:
-                        raise Exception(f"Failed to upload Ep {calc_ep} after 3 attempts")
+                        backfill_entry = {
+                            "story": official_title,
+                            "episode": calc_ep,
+                            "title": display_title,
+                            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
+                            "reason": "Telegram DC storage timeout / read lock"
+                        }
+                        record_pending_backfill(backfill_entry)
+                        if args.allow_backfill_skip:
+                            print(f"⚠️ [ZERO-GAP GATE OVERRIDE] Recorded Ep {calc_ep} to pending_backfill.json. Continuing story pipeline...")
+                            continue
+                        else:
+                            raise Exception(f"Failed to upload Ep {calc_ep} after 5 attempts - stopped by Zero-Gap gate to prevent channel corruption.")
 
                     uploaded_episodes.add(calc_ep)
                     total_new += 1

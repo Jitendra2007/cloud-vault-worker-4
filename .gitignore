@@ -12,5 +12,6 @@ private_sessions/
 # Python cache & temp
 __pycache__/
 *.py[cod]
-.pytest_cache/
-*.tmp
+.env
+*.env
+pending_backfill.json
