@@ -10,6 +10,10 @@ on:
         description: "Start fresh from Episode 1 (delete old if any and create clean channel)"
         required: false
         default: 'false'
+      allow_backfill_skip:
+        description: "Log DC-timeout episodes to pending_backfill.json and continue pipeline"
+        required: false
+        default: 'true'
 
 concurrency:
   group: vault-worker-${{ vars.WORKER_ID || github.repository }}
@@ -43,13 +47,16 @@ jobs:
           API_HASH: ${{ secrets.API_HASH }}
           HARVESTER_SESSION: ${{ secrets.TELEGRAM_STRING_SESSION_HARVESTER }}
           VAULT_SESSION: ${{ secrets.TELEGRAM_STRING_SESSION_VAULT }}
-          TELEGRAM_STRING_SESSION_HARVESTER: ${{ secrets.TELEGRAM_STRING_SESSION_HARVESTER }}
-          TELEGRAM_STRING_SESSION_VAULT: ${{ secrets.TELEGRAM_STRING_SESSION_VAULT }}
+          HARVESTER_SESSION_BACKUP: ${{ secrets.TELEGRAM_STRING_SESSION_HARVESTER_BACKUP }}
+          VAULT_SESSION_BACKUP: ${{ secrets.TELEGRAM_STRING_SESSION_VAULT_BACKUP }}
           WORKER_ID: ${{ vars.WORKER_ID }}
         run: |
           EXTRA_ARGS=""
           if [ "${{ github.event.inputs.from_start }}" = "true" ]; then
-            EXTRA_ARGS="--from_start"
+            EXTRA_ARGS="$EXTRA_ARGS --from_start"
+          fi
+          if [ "${{ github.event.inputs.allow_backfill_skip }}" != "false" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS --allow_backfill_skip"
           fi
           python -u cloud_archiver.py --story "${{ github.event.inputs.story }}" $EXTRA_ARGS
 
@@ -60,7 +67,7 @@ jobs:
           git config --global user.email "worker${{ vars.WORKER_ID || '1' }}@vault.ai"
           git pull origin main --rebase || true
           if [ -f "completed_vault_channels.json" ]; then
-            git add completed_vault_channels.json ongoing_stories.json || true
+            git add completed_vault_channels.json ongoing_stories.json pending_backfill.json || true
             git commit -m "Auto-commit completed vault channel progress [skip ci]" || true
             git push origin main || true
           fi
