@@ -67,7 +67,8 @@ jobs:
           git config --global user.email "worker${{ vars.WORKER_ID || '1' }}@vault.ai"
           git pull origin main --rebase || true
           if [ -f "completed_vault_channels.json" ]; then
-            git add completed_vault_channels.json ongoing_stories.json pending_backfill.json || true
+            git add completed_vault_channels.json ongoing_stories.json || true
+          [ -f pending_backfill.json ] && git add pending_backfill.json || true
             git commit -m "Auto-commit completed vault channel progress [skip ci]" || true
             git push origin main || true
           fi
