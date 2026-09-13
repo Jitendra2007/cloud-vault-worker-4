@@ -333,7 +333,7 @@ async def run_worker(args: argparse.Namespace) -> int:
                 channel,
                 file=input_file,
                 attributes=audio_attrs,
-                supports_streaming=True,
+                supports_streaming=True, mime_type="audio/mpeg",
             )
             existing_eps.add(calc_ep)
             print(f"   ✓ [Ep {calc_ep}] {display_title}")
