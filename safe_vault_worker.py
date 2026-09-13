@@ -289,7 +289,7 @@ async def run_worker(args: argparse.Namespace) -> int:
             else:
                 display_title = f"Ep {calc_ep} - Episode {calc_ep}"
 
-            performer_title = f"{story_name} (Official Pocket FM)"
+            performer_title = story_name
             final_filename = f"{display_title}.mp3"
 
             buf = io.BytesIO()

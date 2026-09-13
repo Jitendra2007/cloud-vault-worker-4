@@ -557,7 +557,7 @@ async def main():
                 continue
 
             display_title = item.get("display_title", f"Ep {calc_ep}")
-            performer_title = f"{official_title} (Official Pocket FM)"
+            performer_title = official_title
             final_filename = f"{display_title}.mp3"
 
             input_file = await vault_client.upload_file(item["mp3_path"], file_name=final_filename)
@@ -684,7 +684,7 @@ async def main():
                     except Exception:
                         tags = ID3()
                     tags.add(TIT2(encoding=3, text=display_title))
-                    tags.add(TPE1(encoding=3, text=f"{official_title} (Official Pocket FM)"))
+                    tags.add(TPE1(encoding=3, text=official_title))
                     clean_buf = io.BytesIO()
                     tags.save(clean_buf)
                     clean_buf.seek(0)
@@ -889,7 +889,7 @@ async def main():
                             sub_title = f"Episode {calc_ep}"
                         display_title = f"Ep {calc_ep} - {sub_title}"
 
-                    performer_title = f"{official_title} (Official Pocket FM)"
+                    performer_title = official_title
                     final_filename = f"{display_title}.mp3"
 
                     # Robust per-episode download and upload with automatic reconnect and retries
