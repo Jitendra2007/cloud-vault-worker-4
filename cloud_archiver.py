@@ -577,7 +577,7 @@ async def main():
                 thumb=cover_input or (cover_path if cover_path and os.path.exists(cover_path) else None),
                 caption="",
                 attributes=audio_attrs,
-                supports_streaming=True, mime_type="audio/mpeg"
+                supports_streaming=True, mime_type=msg.media.document.mime_type or "audio/x-m4a"
             )
             uploaded_episodes.add(calc_ep)
             total_new += 1
@@ -993,7 +993,7 @@ async def main():
                                     thumb=cover_path if cover_path and os.path.exists(cover_path) else None,
                                     caption="",
                                     attributes=audio_attrs,
-                                    supports_streaming=True, mime_type="audio/mpeg"
+                                    supports_streaming=True, mime_type=msg.media.document.mime_type or "audio/x-m4a"
                                 ),
                                 timeout=300.0
                             )

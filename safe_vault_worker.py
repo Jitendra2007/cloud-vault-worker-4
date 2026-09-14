@@ -318,11 +318,15 @@ async def run_worker(args: argparse.Namespace) -> int:
 
             buf.seek(0)
             upload_bytes = buf.getvalue()
+            expected_size = msg.media.document.size if (msg.media and hasattr(msg.media, "document") and msg.media.document) else 0
+            if expected_size > 0 and len(upload_bytes) != expected_size:
+                print(f"🛑 FATAL: Size mismatch for Ep {calc_ep}! Downloaded {len(upload_bytes)} / {expected_size} bytes. Aborting truncated upload!")
+                return 1
 
             input_file = await fast_upload_file(client, upload_bytes, file_name=final_filename, workers=4)
             audio_attrs = [
                 DocumentAttributeAudio(
-                    duration=0,
+                    duration=getattr(next((a for a in msg.media.document.attributes if isinstance(a, DocumentAttributeAudio)), None), "duration", 0),
                     title=display_title,
                     performer=performer_title,
                 ),
@@ -333,7 +337,7 @@ async def run_worker(args: argparse.Namespace) -> int:
                 channel,
                 file=input_file,
                 attributes=audio_attrs,
-                supports_streaming=True, mime_type="audio/mpeg",
+                supports_streaming=True, mime_type=msg.media.document.mime_type or "audio/x-m4a",
             )
             existing_eps.add(calc_ep)
             print(f"   ✓ [Ep {calc_ep}] {display_title}")
