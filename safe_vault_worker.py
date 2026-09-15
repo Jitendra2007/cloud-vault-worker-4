@@ -283,12 +283,16 @@ async def run_worker(args: argparse.Namespace) -> int:
 
             # Determine title
             official_title = official_titles_map.get(str(calc_ep))
+            ep_str = f"{calc_ep:02d}" if calc_ep < 100 else f"{calc_ep}"
+            sub_title = ""
             if official_title:
-                clean_title = re.sub(r'^(?:E|Ep|Episode)\s*\d*\s*[\.:\-–—\s]*', '', official_title, flags=re.I).strip()
-                display_title = f"Ep {calc_ep} - {clean_title}" if clean_title else f"Ep {calc_ep} - {official_title}"
-            else:
-                display_title = f"Ep {calc_ep} - Episode {calc_ep}"
-
+                s = str(official_title).strip()
+                s = re.sub(r'^.*?[-–—]\s*(?:Ep|Episode|E)\s*\d+[\s:\-–—\.]*', '', s, flags=re.I).strip()
+                s = re.sub(r'^(?:Ep|Episode|E)\s*\d+[\s:\-–—\.]*', '', s, flags=re.I).strip()
+                if s and not re.fullmatch(r'(?:Ep|Episode|E)?\s*\d+', s, flags=re.I) and s.lower() != f"episode {calc_ep}":
+                    sub_title = s
+            
+            display_title = f"Ep {ep_str} - {sub_title}" if sub_title else f"Ep {ep_str}"
             performer_title = story_name
             final_filename = f"{display_title}.mp3"
 
