@@ -883,20 +883,20 @@ async def main():
                         continue
 
                     ep_str = f"{calc_ep:02d}" if calc_ep < 100 else f"{calc_ep}"
-                sub_title = ""
-                if official_titles_map and str(calc_ep) in official_titles_map:
-                    s = str(official_titles_map[str(calc_ep)]).strip()
-                    s = re.sub(r'^.*?[-–—]\s*(?:Ep|Episode|E)\s*\d+[\s:\-–—\.]*', '', s, flags=re.I).strip()
-                    s = re.sub(r'^(?:Ep|Episode|E)\s*\d+[\s:\-–—\.]*', '', s, flags=re.I).strip()
-                    if s and not re.fullmatch(r'(?:Ep|Episode|E)?\s*\d+', s, flags=re.I) and s.lower() != f"episode {calc_ep}":
-                        sub_title = s
-                elif raw_title or raw_filename:
-                    clean_raw = clean_audio_title(raw_title or raw_filename)
-                    if clean_raw and not re.fullmatch(r'(?:Ep|Episode|E)?\s*\d+', clean_raw, flags=re.I) and clean_raw.lower() != f"episode {calc_ep}":
-                        sub_title = clean_raw
-                display_title = f"Ep {ep_str} - {sub_title}" if sub_title else f"Ep {ep_str}"
-
-                    performer_title = official_title
+                    sub_title = ""
+                    if official_titles_map and str(calc_ep) in official_titles_map:
+                        s = str(official_titles_map[str(calc_ep)]).strip()
+                        s = re.sub(r'^.*?[-–—]\s*(?:Ep|Episode|E)\s*\d+[\s:\-–—\.]*', '', s, flags=re.I).strip()
+                        s = re.sub(r'^(?:Ep|Episode|E)\s*\d+[\s:\-–—\.]*', '', s, flags=re.I).strip()
+                        if s and not re.fullmatch(r'(?:Ep|Episode|E)?\s*\d+', s, flags=re.I) and s.lower() != f"episode {calc_ep}":
+                            sub_title = s
+                    elif raw_title or raw_filename:
+                        clean_raw = clean_audio_title(raw_title or raw_filename)
+                        if clean_raw and not re.fullmatch(r'(?:Ep|Episode|E)?\s*\d+', clean_raw, flags=re.I) and clean_raw.lower() != f"episode {calc_ep}":
+                            sub_title = clean_raw
+                    display_title = f"Ep {ep_str} - {sub_title}" if sub_title else f"Ep {ep_str}"
+                    official_title = official_titles_map.get(str(calc_ep), "") if official_titles_map else ""
+                    performer_title = official_title if official_title else display_title
                     final_filename = f"{display_title}.mp3"
 
                     # Robust per-episode download and upload with automatic reconnect and retries
