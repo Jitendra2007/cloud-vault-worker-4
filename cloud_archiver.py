@@ -537,7 +537,8 @@ async def main():
         harvested_items.sort(key=lambda x: int(x["calc_ep"]))
         print(f"📦 Found {len(harvested_items)} harvested tracks (Strict Range: Ep {harvested_items[0]['calc_ep']} to Ep {harvested_items[-1]['calc_ep']})")
 
-        channel_title = official_title
+        story_name = official_title
+        channel_title = story_name
         vault_channel = await get_or_create_vault_channel(vault_client, channel_title, cover_path, from_start=args.from_start)
 
         uploaded_episodes = set()
@@ -567,7 +568,7 @@ async def main():
                 continue
 
             display_title = item.get("display_title", f"Ep {calc_ep}")
-            performer_title = official_title
+            performer_title = story_name
             final_filename = f"{display_title}.mp3"
 
             input_file = await vault_client.upload_file(item["mp3_path"], file_name=final_filename)
@@ -709,37 +710,9 @@ async def main():
                 except Exception:
                     buf.seek(0)
 
-                raw_tmp = os.path.join(args.harvest_to_dir, f"raw_{calc_ep:05d}.tmp")
-                with open(raw_tmp, "wb") as out_f:
-                    out_f.write(buf.getvalue())
-
                 mp3_path = os.path.join(args.harvest_to_dir, f"Ep_{calc_ep:05d}.mp3")
-                ff_cmd = [
-                    "ffmpeg", "-y", "-i", raw_tmp,
-                    "-c:a", "libmp3lame", "-b:a", "128k", "-ar", "44100", "-ac", "2",
-                    mp3_path
-                ]
-                res = subprocess.run(ff_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                if res.returncode == 0 and os.path.exists(mp3_path):
-                    try:
-                        from mutagen.id3 import ID3, TIT2, TPE1, APIC
-                        try: tags = ID3(mp3_path)
-                        except Exception: tags = ID3()
-                        tags.add(TIT2(encoding=3, text=display_title))
-                        tags.add(TPE1(encoding=3, text=official_title))
-                        if cover_path and os.path.exists(cover_path):
-                            with open(cover_path, "rb") as img_f:
-                                tags.add(APIC(encoding=3, mime="image/jpeg", type=3, desc="Cover", data=img_f.read()))
-                        tags.save(mp3_path, v2_version=3)
-                    except Exception as tag_err:
-                        print(f"Notice on tagging: {tag_err}")
-                else:
-                    with open(mp3_path, "wb") as out_f:
-                        out_f.write(buf.getvalue())
-
-                if os.path.exists(raw_tmp):
-                    try: os.remove(raw_tmp)
-                    except Exception: pass
+                with open(mp3_path, "wb") as out_f:
+                    out_f.write(buf.getvalue())
 
                 meta_path = os.path.join(args.harvest_to_dir, f"Ep_{calc_ep:05d}.json")
                 meta_data = {
@@ -758,7 +731,7 @@ async def main():
             await harvester_client.disconnect()
         sys.exit(0)
 
-    channel_title = official_title
+    channel_title = f"{official_title} (Official Pocket FM)"
     vault_channel = await get_or_create_vault_channel(vault_client, channel_title, cover_path, from_start=args.from_start)
 
     # Pre-upload cover thumbnail once to save redundant transfers
@@ -930,11 +903,15 @@ async def main():
                             sub_title = s
                     elif raw_title or raw_filename:
                         clean_raw = clean_audio_title(raw_title or raw_filename)
-                        if clean_raw and not re.fullmatch(r'(?:Ep|Episode|E)?\s*\d+', clean_raw, flags=re.I) and clean_raw.lower() != f"episode {calc_ep}":
-                            sub_title = clean_raw
-                    display_title = f"Ep {ep_str} - {sub_title}" if sub_title else f"Ep {ep_str}"
-                    official_title = official_titles_map.get(str(calc_ep), "") if official_titles_map else ""
-                    performer_title = official_title if official_title else display_title
+                    ep_official = official_titles_map.get(str(calc_ep), "") if official_titles_map else ""
+                    if ep_official:
+                        display_title = ep_official if ep_official.startswith("E") or ep_official.startswith("Ep") else f"Ep {ep_str} - {ep_official}"
+                    elif sub_title:
+                        display_title = f"Ep {ep_str} - {sub_title}"
+                    else:
+                        display_title = f"Ep {ep_str}"
+
+                    performer_title = official_title
                     final_filename = f"{display_title}.mp3"
 
                     # Robust per-episode download and upload with automatic reconnect and retries
