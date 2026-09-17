@@ -1,11 +1,14 @@
 name: Cloud Vault Archiver Worker
 
 on:
+  schedule:
+    - cron: '0 */6 * * *'
   workflow_dispatch:
     inputs:
       story:
-        description: "Story Name (e.g. Mad Vampire Lord's Bride, A Wife's Revenge, Child of Calamity)"
-        required: true
+        description: "Story Name (e.g. Shadow Slave, Supreme Magus)"
+        required: false
+        default: ''
       from_start:
         description: "Start fresh from Episode 1 (delete old if any and create clean channel)"
         required: false
@@ -52,13 +55,17 @@ jobs:
           WORKER_ID: ${{ vars.WORKER_ID }}
         run: |
           EXTRA_ARGS=""
+          STORY_ARG=""
+          if [ -n "${{ github.event.inputs.story }}" ]; then
+            STORY_ARG="--story '${{ github.event.inputs.story }}'"
+          fi
           if [ "${{ github.event.inputs.from_start }}" = "true" ]; then
             EXTRA_ARGS="$EXTRA_ARGS --from_start"
           fi
           if [ "${{ github.event.inputs.allow_backfill_skip }}" != "false" ]; then
             EXTRA_ARGS="$EXTRA_ARGS --allow_backfill_skip"
           fi
-          python -u cloud_archiver.py --story "${{ github.event.inputs.story }}" $EXTRA_ARGS
+          python -u cloud_archiver.py $STORY_ARG $EXTRA_ARGS
 
       - name: Auto-Commit Progress to Repository
         if: always()
@@ -68,7 +75,7 @@ jobs:
           git pull origin main --rebase || true
           if [ -f "completed_vault_channels.json" ]; then
             git add completed_vault_channels.json ongoing_stories.json || true
-          [ -f pending_backfill.json ] && git add pending_backfill.json || true
+            [ -f pending_backfill.json ] && git add pending_backfill.json || true
             git commit -m "Auto-commit completed vault channel progress [skip ci]" || true
             git push origin main || true
           fi
