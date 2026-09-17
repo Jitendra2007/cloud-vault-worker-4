@@ -311,7 +311,7 @@ async def get_or_create_vault_channel(vault_client, channel_title, cover_path, f
 
 async def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--story", type=str, required=True, help="Story name (e.g. 'God Eye')")
+    parser.add_argument("--story", type=str, required=False, default="", help="Story name (e.g. 'God Eye')")
     parser.add_argument("--max_batches", type=int, default=0, help="Max batches to process (0 for all)")
     parser.add_argument("--from_start", action="store_true", help="Start fresh from Episode 1")
     parser.add_argument("--slice_idx", type=int, default=0, help="Slice index for parallel harvest (1-based)")
@@ -320,6 +320,16 @@ async def main():
     parser.add_argument("--stream_from_dir", type=str, default="", help="Directory containing pre-harvested MP3s to stream into Vault channel")
     parser.add_argument("--allow_backfill_skip", action="store_true", help="Record stalled DC-timeout episodes to pending_backfill.json and continue pipeline")
     args = parser.parse_args()
+
+    if not args.story and os.path.exists("ongoing_stories.json"):
+        try:
+            with open("ongoing_stories.json", "r", encoding="utf-8") as f_ong:
+                ong_data = json.load(f_ong)
+                if ong_data and isinstance(ong_data, list) and len(ong_data) > 0:
+                    args.story = ong_data[0].get("name", "")
+                    print(f"ℹ️ Auto-selected story from ongoing_stories.json: '{args.story}'")
+        except Exception as e_ong:
+            print(f"Notice auto-reading ongoing_stories.json: {e_ong}")
 
     harvester_sess = HARVESTER_SESSION or os.environ.get(f"TELEGRAM_STRING_SESSION_HARVESTER_{args.slice_idx}") or VAULT_SESSION
     if not API_ID or not API_HASH:
