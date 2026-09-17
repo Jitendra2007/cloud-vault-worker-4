@@ -537,7 +537,7 @@ async def main():
         harvested_items.sort(key=lambda x: int(x["calc_ep"]))
         print(f"📦 Found {len(harvested_items)} harvested tracks (Strict Range: Ep {harvested_items[0]['calc_ep']} to Ep {harvested_items[-1]['calc_ep']})")
 
-        channel_title = f"{official_title} (Official Pocket FM)"
+        channel_title = official_title
         vault_channel = await get_or_create_vault_channel(vault_client, channel_title, cover_path, from_start=args.from_start)
 
         uploaded_episodes = set()
@@ -726,7 +726,7 @@ async def main():
                         try: tags = ID3(mp3_path)
                         except Exception: tags = ID3()
                         tags.add(TIT2(encoding=3, text=display_title))
-                        tags.add(TPE1(encoding=3, text=f"{official_title} (Official Pocket FM)"))
+                        tags.add(TPE1(encoding=3, text=official_title))
                         if cover_path and os.path.exists(cover_path):
                             with open(cover_path, "rb") as img_f:
                                 tags.add(APIC(encoding=3, mime="image/jpeg", type=3, desc="Cover", data=img_f.read()))
@@ -758,7 +758,7 @@ async def main():
             await harvester_client.disconnect()
         sys.exit(0)
 
-    channel_title = f"{official_title} (Official Pocket FM)"
+    channel_title = official_title
     vault_channel = await get_or_create_vault_channel(vault_client, channel_title, cover_path, from_start=args.from_start)
 
     # Pre-upload cover thumbnail once to save redundant transfers
