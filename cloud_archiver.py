@@ -709,9 +709,37 @@ async def main():
                 except Exception:
                     buf.seek(0)
 
-                mp3_path = os.path.join(args.harvest_to_dir, f"Ep_{calc_ep:05d}.mp3")
-                with open(mp3_path, "wb") as out_f:
+                raw_tmp = os.path.join(args.harvest_to_dir, f"raw_{calc_ep:05d}.tmp")
+                with open(raw_tmp, "wb") as out_f:
                     out_f.write(buf.getvalue())
+
+                mp3_path = os.path.join(args.harvest_to_dir, f"Ep_{calc_ep:05d}.mp3")
+                ff_cmd = [
+                    "ffmpeg", "-y", "-i", raw_tmp,
+                    "-c:a", "libmp3lame", "-b:a", "128k", "-ar", "44100", "-ac", "2",
+                    mp3_path
+                ]
+                res = subprocess.run(ff_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                if res.returncode == 0 and os.path.exists(mp3_path):
+                    try:
+                        from mutagen.id3 import ID3, TIT2, TPE1, APIC
+                        try: tags = ID3(mp3_path)
+                        except Exception: tags = ID3()
+                        tags.add(TIT2(encoding=3, text=display_title))
+                        tags.add(TPE1(encoding=3, text=f"{official_title} (Official Pocket FM)"))
+                        if cover_path and os.path.exists(cover_path):
+                            with open(cover_path, "rb") as img_f:
+                                tags.add(APIC(encoding=3, mime="image/jpeg", type=3, desc="Cover", data=img_f.read()))
+                        tags.save(mp3_path, v2_version=3)
+                    except Exception as tag_err:
+                        print(f"Notice on tagging: {tag_err}")
+                else:
+                    with open(mp3_path, "wb") as out_f:
+                        out_f.write(buf.getvalue())
+
+                if os.path.exists(raw_tmp):
+                    try: os.remove(raw_tmp)
+                    except Exception: pass
 
                 meta_path = os.path.join(args.harvest_to_dir, f"Ep_{calc_ep:05d}.json")
                 meta_data = {
