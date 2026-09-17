@@ -959,7 +959,7 @@ async def main():
                                         ))
                                     except Exception:
                                         pass
-                                tags.save(tmp_mp3)
+                                tags.save(tmp_mp3, v2_version=3)
                             except Exception as tag_err:
                                 print(f"   Notice on ID3 tag rewrite for Ep {calc_ep}: {tag_err}")
 
@@ -1000,7 +1000,8 @@ async def main():
                                     thumb=cover_path if cover_path and os.path.exists(cover_path) else None,
                                     caption="",
                                     attributes=audio_attrs,
-                                    supports_streaming=True, mime_type=msg.media.document.mime_type or "audio/x-m4a"
+                                    supports_streaming=True,
+                                    mime_type="audio/mpeg"
                                 ),
                                 timeout=300.0
                             )
