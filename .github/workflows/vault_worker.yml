@@ -55,17 +55,17 @@ jobs:
           WORKER_ID: ${{ vars.WORKER_ID }}
         run: |
           EXTRA_ARGS=""
-          STORY_ARG=""
-          if [ -n "${{ github.event.inputs.story }}" ]; then
-            STORY_ARG="--story '${{ github.event.inputs.story }}'"
-          fi
           if [ "${{ github.event.inputs.from_start }}" = "true" ]; then
             EXTRA_ARGS="$EXTRA_ARGS --from_start"
           fi
           if [ "${{ github.event.inputs.allow_backfill_skip }}" != "false" ]; then
             EXTRA_ARGS="$EXTRA_ARGS --allow_backfill_skip"
           fi
-          python -u cloud_archiver.py $STORY_ARG $EXTRA_ARGS
+          if [ -n "${{ github.event.inputs.story }}" ]; then
+            python -u cloud_archiver.py --story "${{ github.event.inputs.story }}" $EXTRA_ARGS
+          else
+            python -u cloud_archiver.py $EXTRA_ARGS
+          fi
 
       - name: Auto-Commit Progress to Repository
         if: always()
@@ -78,4 +78,17 @@ jobs:
             [ -f pending_backfill.json ] && git add pending_backfill.json || true
             git commit -m "Auto-commit completed vault channel progress [skip ci]" || true
             git push origin main || true
+          fi
+
+      - name: Auto-Retrigger If Incomplete
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🔄 Checking if auto-retrigger is needed to continue streaming remaining episodes..."
+          if [ -f "completed_vault_channels.json" ]; then
+            echo "✓ Story completed, no retrigger needed."
+          else
+            echo "⚡ Story ongoing/incomplete, re-triggering next worker run to continue streaming..."
+            gh workflow run vault_worker.yml -f story="${{ github.event.inputs.story }}" || true
           fi
