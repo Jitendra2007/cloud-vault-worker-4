@@ -1066,6 +1066,7 @@ async def main():
                             await asyncio.sleep(4.0 * ep_attempt)
 
                     if not ep_uploaded:
+                        backfill_entry = {
                             "episode": calc_ep,
                             "title": display_title,
                             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
