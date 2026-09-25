@@ -311,7 +311,7 @@ async def get_or_create_vault_channel(vault_client, channel_title, cover_path, f
 
 async def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--story", type=str, required=True, help="Story name (e.g. 'God Eye')")
+    parser.add_argument("--story", type=str, required=False, default="", help="Story name (e.g. 'God Eye')")
     parser.add_argument("--max_batches", type=int, default=0, help="Max batches to process (0 for all)")
     parser.add_argument("--from_start", action="store_true", help="Start fresh from Episode 1")
     parser.add_argument("--slice_idx", type=int, default=0, help="Slice index for parallel harvest (1-based)")
@@ -320,6 +320,16 @@ async def main():
     parser.add_argument("--stream_from_dir", type=str, default="", help="Directory containing pre-harvested MP3s to stream into Vault channel")
     parser.add_argument("--allow_backfill_skip", action="store_true", help="Record stalled DC-timeout episodes to pending_backfill.json and continue pipeline")
     args = parser.parse_args()
+
+    if not args.story and os.path.exists("ongoing_stories.json"):
+        try:
+            with open("ongoing_stories.json", "r", encoding="utf-8") as f_ong:
+                ong_data = json.load(f_ong)
+                if ong_data and isinstance(ong_data, list) and len(ong_data) > 0:
+                    args.story = ong_data[0].get("name", "")
+                    print(f"ℹ️ Auto-selected story from ongoing_stories.json: '{args.story}'")
+        except Exception as e_ong:
+            print(f"Notice auto-reading ongoing_stories.json: {e_ong}")
 
     harvester_sess = HARVESTER_SESSION or os.environ.get(f"TELEGRAM_STRING_SESSION_HARVESTER_{args.slice_idx}") or VAULT_SESSION
     if not API_ID or not API_HASH:
@@ -527,7 +537,8 @@ async def main():
         harvested_items.sort(key=lambda x: int(x["calc_ep"]))
         print(f"📦 Found {len(harvested_items)} harvested tracks (Strict Range: Ep {harvested_items[0]['calc_ep']} to Ep {harvested_items[-1]['calc_ep']})")
 
-        channel_title = f"{official_title} (Official Pocket FM)"
+        story_name = official_title
+        channel_title = story_name
         vault_channel = await get_or_create_vault_channel(vault_client, channel_title, cover_path, from_start=args.from_start)
 
         uploaded_episodes = set()
@@ -557,7 +568,7 @@ async def main():
                 continue
 
             display_title = item.get("display_title", f"Ep {calc_ep}")
-            performer_title = official_title
+            performer_title = story_name
             final_filename = f"{display_title}.mp3"
 
             input_file = await vault_client.upload_file(item["mp3_path"], file_name=final_filename)
@@ -866,72 +877,109 @@ async def main():
                 audio_messages = sorted(list(unique_tracks.values()), key=lambda m: m._calc_ep)
                 print(f"   Received {len(audio_messages)} tracks (Strictly sorted: {[m._calc_ep for m in audio_messages]}). Uploading to Vault...")
 
-                for a_idx, msg in enumerate(audio_messages):
-                    raw_filename = ""
-                    raw_title = ""
-                    duration = 0
-                    for attr in msg.media.document.attributes:
-                        if isinstance(attr, DocumentAttributeFilename):
-                            raw_filename = attr.file_name
-                        elif isinstance(attr, DocumentAttributeAudio):
-                            duration = attr.duration or 0
-                            if attr.title:
-                                raw_title = attr.title
+                download_queue = asyncio.Queue(maxsize=3)
 
-                    calc_ep = getattr(msg, '_calc_ep', s_ep + a_idx)
-                    if calc_ep in uploaded_episodes:
-                        continue
+                async def download_producer():
+                    for a_idx, msg in enumerate(audio_messages):
+                        calc_ep = getattr(msg, '_calc_ep', s_ep + a_idx)
+                        if calc_ep in uploaded_episodes:
+                            continue
+                        raw_filename = ""
+                        raw_title = ""
+                        duration = 0
+                        for attr in msg.media.document.attributes:
+                            if isinstance(attr, DocumentAttributeFilename):
+                                raw_filename = attr.file_name
+                            elif isinstance(attr, DocumentAttributeAudio):
+                                duration = attr.duration or 0
+                                if attr.title:
+                                    raw_title = attr.title
 
-                    ep_str = f"{calc_ep:02d}" if calc_ep < 100 else f"{calc_ep}"
-                sub_title = ""
-                if official_titles_map and str(calc_ep) in official_titles_map:
-                    s = str(official_titles_map[str(calc_ep)]).strip()
-                    s = re.sub(r'^.*?[-–—]\s*(?:Ep|Episode|E)\s*\d+[\s:\-–—\.]*', '', s, flags=re.I).strip()
-                    s = re.sub(r'^(?:Ep|Episode|E)\s*\d+[\s:\-–—\.]*', '', s, flags=re.I).strip()
-                    if s and not re.fullmatch(r'(?:Ep|Episode|E)?\s*\d+', s, flags=re.I) and s.lower() != f"episode {calc_ep}":
-                        sub_title = s
-                elif raw_title or raw_filename:
-                    clean_raw = clean_audio_title(raw_title or raw_filename)
-                    if clean_raw and not re.fullmatch(r'(?:Ep|Episode|E)?\s*\d+', clean_raw, flags=re.I) and clean_raw.lower() != f"episode {calc_ep}":
-                        sub_title = clean_raw
-                display_title = f"Ep {ep_str} - {sub_title}" if sub_title else f"Ep {ep_str}"
+                        ep_str = f"{calc_ep:02d}" if calc_ep < 100 else f"{calc_ep}"
+                        sub_title = ""
+                        if official_titles_map and str(calc_ep) in official_titles_map:
+                            s = str(official_titles_map[str(calc_ep)]).strip()
+                            s = re.sub(r'^.*?[-–—]\s*(?:Ep|Episode|E)\s*\d+[\s:\-–—\.]*', '', s, flags=re.I).strip()
+                            s = re.sub(r'^(?:Ep|Episode|E)\s*\d+[\s:\-–—\.]*', '', s, flags=re.I).strip()
+                            if s and not re.fullmatch(r'(?:Ep|Episode|E)?\s*\d+', s, flags=re.I) and s.lower() != f"episode {calc_ep}":
+                                sub_title = s
+                        elif raw_title or raw_filename:
+                            clean_raw = clean_audio_title(raw_title or raw_filename)
+                        ep_official = official_titles_map.get(str(calc_ep), "") if official_titles_map else ""
+                        if ep_official:
+                            display_title = ep_official if ep_official.startswith("E") or ep_official.startswith("Ep") else f"Ep {ep_str} - {ep_official}"
+                        elif sub_title:
+                            display_title = f"Ep {ep_str} - {sub_title}"
+                        else:
+                            display_title = f"Ep {ep_str}"
 
-                    performer_title = official_title
-                    final_filename = f"{display_title}.mp3"
+                        performer_title = official_title
+                        final_filename = f"{display_title}.mp3"
 
-                    # Robust per-episode download and upload with automatic reconnect and retries
+                        raw_bytes = None
+                        for ep_attempt in range(1, 6):
+                            try:
+                                buf = io.BytesIO()
+                                active_dl_client = download_client if download_client else (harvester_client if harvester_client and harvester_client.is_connected() else vault_client)
+                                for dl_try in range(1, 6):
+                                    try:
+                                        if not active_dl_client.is_connected():
+                                            await active_dl_client.connect()
+                                        buf.seek(0)
+                                        buf.truncate(0)
+                                        fresh_msg = await active_dl_client.get_messages(msg.peer_id, ids=msg.id)
+                                        target_m = fresh_msg if (fresh_msg and fresh_msg.media) else msg
+                                        await asyncio.wait_for(
+                                            active_dl_client.download_media(target_m, file=buf),
+                                            timeout=180.0
+                                        )
+                                        if buf.getbuffer().nbytes > 0:
+                                            break
+                                    except FloodWaitError as fwe:
+                                        print(f"⏳ Telegram FloodWait during download of Ep {calc_ep}: Sleeping {fwe.seconds + 5}s...")
+                                        await asyncio.sleep(fwe.seconds + 5)
+                                    except (Exception, asyncio.CancelledError, asyncio.TimeoutError) as dl_err:
+                                        print(f"   ⚠️ Download attempt {dl_try}/5 for Ep {calc_ep}: {dl_err}")
+                                        await asyncio.sleep(4.0 * dl_try)
+
+                                buf.seek(0)
+                                raw_bytes = buf.getvalue()
+                                if len(raw_bytes) < 500_000:
+                                    raise Exception(f"Downloaded only {len(raw_bytes)} bytes for Ep {calc_ep} - audio stream is truncated or corrupt!")
+                                break
+                            except Exception as dl_err:
+                                print(f"⚠️ Error harvesting Ep {calc_ep}: {dl_err}")
+                                record_pending_backfill({"story": official_title, "episode": calc_ep, "reason": str(dl_err)})
+                                raw_bytes = None
+
+                        if raw_bytes:
+                            await download_queue.put({
+                                "calc_ep": calc_ep,
+                                "display_title": display_title,
+                                "performer_title": performer_title,
+                                "final_filename": final_filename,
+                                "raw_bytes": raw_bytes,
+                                "duration": duration
+                            })
+                    await download_queue.put(None)
+
+                producer_task = asyncio.create_task(download_producer())
+
+                while True:
+                    item = await download_queue.get()
+                    if item is None:
+                        break
+                    
+                    calc_ep = item["calc_ep"]
+                    display_title = item["display_title"]
+                    performer_title = item["performer_title"]
+                    final_filename = item["final_filename"]
+                    raw_bytes = item["raw_bytes"]
+                    duration = item["duration"]
+
                     ep_uploaded = False
                     for ep_attempt in range(1, 6):
                         try:
-                            buf = io.BytesIO()
-                            active_dl_client = download_client if download_client else (harvester_client if harvester_client and harvester_client.is_connected() else vault_client)
-                            for dl_try in range(1, 6):
-                                try:
-                                    if not active_dl_client.is_connected():
-                                        await active_dl_client.connect()
-                                    buf.seek(0)
-                                    buf.truncate(0)
-                                    # Refetch fresh message header from active download client
-                                    fresh_msg = await active_dl_client.get_messages(msg.peer_id, ids=msg.id)
-                                    target_m = fresh_msg if (fresh_msg and fresh_msg.media) else msg
-                                    await asyncio.wait_for(
-                                        active_dl_client.download_media(target_m, file=buf),
-                                        timeout=180.0
-                                    )
-                                    if buf.getbuffer().nbytes > 0:
-                                        break
-                                except FloodWaitError as fwe:
-                                    print(f"⏳ Telegram FloodWait during download of Ep {calc_ep}: Sleeping {fwe.seconds + 5}s...")
-                                    await asyncio.sleep(fwe.seconds + 5)
-                                except (Exception, asyncio.CancelledError, asyncio.TimeoutError) as dl_err:
-                                    print(f"   ⚠️ Download attempt {dl_try}/5 for Ep {calc_ep}: {dl_err}")
-                                    await asyncio.sleep(4.0 * dl_try)
-
-                            buf.seek(0)
-                            raw_bytes = buf.getvalue()
-                            if len(raw_bytes) < 500_000:
-                                raise Exception(f"Downloaded only {len(raw_bytes)} bytes for Ep {calc_ep} - audio stream is truncated or corrupt!")
-
                             # 🏷️ REWRITE EMBEDDED ID3 TAGS (SAFE ON-DISK TEMP FILE TO PRESERVE MPEG STREAM)
                             tmp_mp3 = os.path.join("scratch", f"upload_ep_{calc_ep}_{os.getpid()}.mp3")
                             os.makedirs("scratch", exist_ok=True)
@@ -959,7 +1007,7 @@ async def main():
                                         ))
                                     except Exception:
                                         pass
-                                tags.save(tmp_mp3)
+                                tags.save(tmp_mp3, v2_version=3)
                             except Exception as tag_err:
                                 print(f"   Notice on ID3 tag rewrite for Ep {calc_ep}: {tag_err}")
 
@@ -1000,22 +1048,25 @@ async def main():
                                     thumb=cover_path if cover_path and os.path.exists(cover_path) else None,
                                     caption="",
                                     attributes=audio_attrs,
-                                    supports_streaming=True, mime_type=msg.media.document.mime_type or "audio/x-m4a"
+                                    supports_streaming=True,
+                                    mime_type="audio/mpeg"
                                 ),
-                                timeout=300.0
+                                timeout=120.0
                             )
+                            print(f"🚀 [WORKER {WORKER_ID}] [Batch {b_idx+1}/{len(batches)}] Uploaded Ep {calc_ep} -> '{display_title}' ({final_sz/1024/1024:.2f} MB)")
+                            uploaded_episodes.add(calc_ep)
+                            total_new += 1
                             ep_uploaded = True
                             break
                         except FloodWaitError as fwe:
-                            print(f"⏳ Telegram FloodWait on Ep {calc_ep} upload: Sleeping {fwe.seconds + 5}s...")
+                            print(f"⏳ Telegram FloodWait on Vault upload of Ep {calc_ep}: Sleeping {fwe.seconds + 5}s...")
                             await asyncio.sleep(fwe.seconds + 5)
                         except (Exception, asyncio.CancelledError, asyncio.TimeoutError) as ep_err:
-                            print(f"   ⚠️ Ep {calc_ep} transfer glitch (attempt {ep_attempt}/5): {ep_err}")
-                            await asyncio.sleep(3.0 * ep_attempt)
+                            print(f"⚠️ Upload attempt {ep_attempt}/5 for Ep {calc_ep} failed: {ep_err}")
+                            await asyncio.sleep(4.0 * ep_attempt)
 
                     if not ep_uploaded:
                         backfill_entry = {
-                            "story": official_title,
                             "episode": calc_ep,
                             "title": display_title,
                             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),

@@ -64,5 +64,23 @@
     "vault_channel_id": "-1004304992522",
     "total_episodes": 1023,
     "timestamp": "2026-09-14 02:54:02 UTC"
+  },
+  {
+    "story": "Fallen Cultivator",
+    "vault_channel_id": "-1004304862644",
+    "total_episodes": 721,
+    "timestamp": "2026-09-21 17:11:06 UTC"
+  },
+  {
+    "story": "Shadow Slave",
+    "vault_channel_id": "-1004359534500",
+    "total_episodes": 2132,
+    "timestamp": "2026-09-22 03:20:40 UTC"
+  },
+  {
+    "story": "The Silver Reign (English) \u2022Pocket FM\u2022",
+    "source_channel_id": "-1003793893107",
+    "vault_channel_id": "-1003960098656",
+    "vault_title": "The Silver Reign (Official Pocket FM)"
   }
 ]
